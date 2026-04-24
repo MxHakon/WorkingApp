@@ -1,0 +1,43 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build app (no signing)
+        run: |
+          xcodebuild \
+            -project WorkingApp.xcodeproj \
+            -scheme WorkingApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package into IPA
+        run: |
+          mkdir -p ipabuild/Payload
+          cp -r build/Build/Products/Release-iphoneos/WorkingApp.app ipabuild/Payload/
+          cd ipabuild
+          zip -r ../WorkingApp.ipa Payload
+          cd ..
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorkingApp-IPA
+          path: WorkingApp.ipa
